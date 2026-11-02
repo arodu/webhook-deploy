@@ -1,17 +1,20 @@
 # webhook-deploy
 
-Composite GitHub Action para disparar un deploy por webhook. La URL completa se
-pasa desde `secrets`, así no queda hardcodeada en el repo.
+Composite GitHub Action para disparar un deploy por webhook. Es genérica: no
+depende de ningún proveedor. Solo necesita una URL completa, un secreto HMAC
+opcional y un content type.
 
-Replica el formulario de webhooks de GitHub:
+Se configura con tres datos:
 
-- **Payload URL** → input `url` (desde un secret).
-- **Content type** → input `content-type` (`application/json` por defecto).
-- **Secret** → input `secret` (opcional).
+- `url`: la URL completa del webhook (desde el secret `WEBHOOK_URL`).
+- `secret`: opcional (secret `WEBHOOK_SECRET`). Si está vacío, no se firma.
+- `content-type`: `application/json` (default) o
+  `application/x-www-form-urlencoded`.
 
-Siempre hace `POST` de eventos `push`, igual que un webhook de GitHub.
+Cada repo usa el mismo nombre de secret, pero con el valor de su propio webhook.
+No hay acoplamiento a un proveedor.
 
-## Homelab / webhook con HMAC
+## Webhook con HMAC
 
 ```yaml
 name: deploy
@@ -27,31 +30,34 @@ jobs:
     steps:
       - uses: arodu/webhook-deploy@v1
         with:
-          url: ${{ secrets.HOMELAB_DEPLOY_URL }}
-          secret: ${{ secrets.HOMELAB_DEPLOY_SECRET }}
+          url: ${{ secrets.WEBHOOK_URL }}
+          secret: ${{ secrets.WEBHOOK_SECRET }}
 ```
 
-`HOMELAB_DEPLOY_URL` es la URL completa, por ejemplo
+`WEBHOOK_URL` es la URL completa, por ejemplo
 `https://example.com/hooks/my-app`.
 
-## Hostinger / URL con token, sin HMAC
+## URL con token, sin HMAC
+
+Si la URL ya incluye el token, alcanza con `WEBHOOK_URL`:
 
 ```yaml
 - uses: arodu/webhook-deploy@v1
   with:
-    url: ${{ secrets.HOSTINGER_DEPLOY_URL }}
+    url: ${{ secrets.WEBHOOK_URL }}
 ```
-
-La URL de Hostinger ya incluye el token; no hace falta `secret`.
 
 Si el endpoint espera formulario:
 
 ```yaml
 - uses: arodu/webhook-deploy@v1
   with:
-    url: ${{ secrets.HOSTINGER_DEPLOY_URL }}
+    url: ${{ secrets.WEBHOOK_URL }}
     content-type: application/x-www-form-urlencoded
 ```
+
+El mismo workflow sirve para ambos casos: si `WEBHOOK_SECRET` no existe, se
+resuelve como vacío y la action no firma.
 
 ## Inputs
 
